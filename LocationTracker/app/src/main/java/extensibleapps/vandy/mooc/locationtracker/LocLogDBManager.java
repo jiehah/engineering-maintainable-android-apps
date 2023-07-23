@@ -61,6 +61,19 @@ public class LocLogDBManager {
             String desc) {
 
         // TODO | Store the location data in the database
+
+        ContentValues values = new ContentValues();
+        values.put(LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_TIME, time);
+        values.put(LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_LATITUDE, lat);
+        values.put(LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_lONGITUDE, lon);
+        values.put(LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_DESCRIPTION, desc);
+
+        long newRowId = mDB.insert(LocDBContract.FeedEntry.TABLE_NAME, null, values);
+        if (newRowId == -1) {
+            Log.e(TAG, "Error storing location data into the database.");
+        } else {
+            Log.d(TAG, "Location data stored successfully.");
+        }
     }
 
     /**
@@ -75,7 +88,41 @@ public class LocLogDBManager {
         // TODO | Delete any database entries with the provided params. Return the
         // TODO | number of rows that are deleted (change the return given below)
 
-        return 0;
+        String selection = "";
+        List<String> selectionArgs = new ArrayList<>();
+
+        if (timeToDelete != null) {
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_TIME + " = ?";
+            selectionArgs.add(timeToDelete);
+        }
+
+        if (latToDelete != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_LATITUDE + " = ?";
+            selectionArgs.add(latToDelete);
+        }
+
+        if (longToDelete != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_lONGITUDE + " = ?";
+            selectionArgs.add(longToDelete);
+        }
+
+        if (descToDelete != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_DESCRIPTION + " = ?";
+            selectionArgs.add(descToDelete);
+        }
+
+        int deletedRows = mDB.delete(LocDBContract.FeedEntry.TABLE_NAME, selection, selectionArgs.toArray(new String[0]));
+        Log.d(TAG, "Deleted " + deletedRows + " row(s) from the database.");
+        return deletedRows;
     }
 
     /**
@@ -89,7 +136,47 @@ public class LocLogDBManager {
         // TODO | Return a Cursor containing entries with the provided params.
         // TODO | (change the return given below)
 
-        return null;
+        String selection = "";
+        List<String> selectionArgs = new ArrayList<>();
+
+        if (time != null) {
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_TIME + " = ?";
+            selectionArgs.add(time);
+        }
+
+        if (lat != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_LATITUDE + " = ?";
+            selectionArgs.add(lat);
+        }
+
+        if (lon != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_lONGITUDE + " = ?";
+            selectionArgs.add(lon);
+        }
+
+        if (desc != null) {
+            if (!selection.isEmpty()) {
+                selection += " AND ";
+            }
+            selection += LocDBContract.FeedEntry.COLUMN_NAME_ENTRY_DESCRIPTION + " = ?";
+            selectionArgs.add(desc);
+        }
+
+        return mDB.query(
+                LocDBContract.FeedEntry.TABLE_NAME,
+                null,
+                selection,
+                selectionArgs.toArray(new String[0]),
+                null,
+                null,
+                null
+        );
     }
 }
 

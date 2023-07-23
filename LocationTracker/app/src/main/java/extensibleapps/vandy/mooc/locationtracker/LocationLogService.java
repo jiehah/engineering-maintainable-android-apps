@@ -1,6 +1,7 @@
 package extensibleapps.vandy.mooc.locationtracker;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -10,7 +11,9 @@ import android.database.DatabaseUtils;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.PermissionChecker;
 import android.text.TextUtils;
@@ -38,6 +41,7 @@ public class LocationLogService extends Service {
             return LocationLogService.this;
         }
     }
+
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
@@ -67,12 +71,27 @@ public class LocationLogService extends Service {
      * Method called by the Android started service framework whenever a client
      * starts this service with an intent.
      */
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         Log.v(TAG, "Service Started");
 
         // TODO | Perform any start up actions, gather the required data, and store said data in the database using the LocLogDBManger.
+
+        // Check if the required permissions are granted before proceeding
+        if (checkLocationPermissions()) {
+            // Get the description provided by the client
+            String description = intent.getStringExtra(DESCRIPTION_KEY);
+
+            // Get the last known location from the LocationManager
+            Location lastKnownLocation = getLastKnownLocation();
+
+            // Store the location data in the database using the LocLogDBManager
+            if (lastKnownLocation != null) {
+                storeLocationData(lastKnownLocation, description);
+            }
+        }
 
         // Stop the service once the logging is complete
         stopSelf(startId);
@@ -98,5 +117,52 @@ public class LocationLogService extends Service {
     @Override
     public void onDestroy() {
         // Nothing to clean up.
+    }
+
+    /**
+     * Check if the required location permissions are granted.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private boolean checkLocationPermissions() {
+        return ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this,
+                        Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Get the last known location from the LocationManager.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private Location getLastKnownLocation() {
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        Location lastKnownLocation = null;
+
+        // Check if the required permissions are granted before requesting location updates
+        if (checkLocationPermissions()) {
+            List<String> providers = mLocationManager.getProviders(true);
+            for (String provider : providers) {
+                @SuppressLint("MissingPermission")
+                Location location = mLocationManager.getLastKnownLocation(provider);
+                if (location != null) {
+                    if (lastKnownLocation == null || location.getTime() > lastKnownLocation.getTime()) {
+                        lastKnownLocation = location;
+                    }
+                }
+            }
+        }
+
+        return lastKnownLocation;
+    }
+
+    /**
+     * Store the location data in the database using the LocLogDBManager.
+     */
+    private void storeLocationData(Location location, String description) {
+        String time = String.valueOf(System.currentTimeMillis());
+        String latitude = String.valueOf(location.getLatitude());
+        String longitude = String.valueOf(location.getLongitude());
+
+        mDBManager.storeLocationData(time, latitude, longitude, description);
     }
 }
